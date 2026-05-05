@@ -1,0 +1,147 @@
+<Window x:Class="WaferDefectDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wafer Defect Predictor — LightGBM"
+        Height="640" Width="1100"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="DefectRowStyle" TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDefective}" Value="True">
+                    <Setter Property="Background" Value="#FFE5E5"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,12,0,4"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,2,8,2"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="380"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT: dataset grid -->
+        <DockPanel Grid.Column="0" Margin="0,0,12,0">
+            <TextBlock DockPanel.Dock="Top"
+                       Text="Dataset"
+                       Style="{StaticResource SectionHeader}"
+                       Margin="0,0,0,4"/>
+            <TextBlock x:Name="DatasetStatus"
+                       DockPanel.Dock="Bottom"
+                       Margin="0,6,0,0"
+                       Foreground="#444"/>
+            <DataGrid x:Name="WaferGrid"
+                      AutoGenerateColumns="True"
+                      IsReadOnly="True"
+                      RowStyle="{StaticResource DefectRowStyle}"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      AlternatingRowBackground="#F7F7F7"/>
+        </DockPanel>
+
+        <!-- RIGHT: input + actions -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="Process parameters" Style="{StaticResource SectionHeader}"/>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Temperature (°C)"   Grid.Row="0" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="TemperatureBox"     Grid.Row="0" Grid.Column="1" Text="400" Margin="0,2"/>
+
+                    <TextBlock Text="Pressure (mTorr)"   Grid.Row="1" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="PressureBox"        Grid.Row="1" Grid.Column="1" Text="100" Margin="0,2"/>
+
+                    <TextBlock Text="EtchTime (s)"       Grid.Row="2" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="EtchTimeBox"        Grid.Row="2" Grid.Column="1" Text="60"  Margin="0,2"/>
+
+                    <TextBlock Text="ParticleCount"      Grid.Row="3" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="ParticleCountBox"   Grid.Row="3" Grid.Column="1" Text="10"  Margin="0,2"/>
+
+                    <TextBlock Text="FilmThickness (nm)" Grid.Row="4" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="FilmThicknessBox"   Grid.Row="4" Grid.Column="1" Text="100" Margin="0,2"/>
+
+                    <TextBlock Text="Uniformity (%)"     Grid.Row="5" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="UniformityBox"      Grid.Row="5" Grid.Column="1" Text="99"  Margin="0,2"/>
+
+                    <TextBlock Text="Defective (label)"  Grid.Row="6" Grid.Column="0" Style="{StaticResource FieldLabel}"/>
+                    <CheckBox x:Name="IsDefectiveBox"    Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Margin="0,4"/>
+                </Grid>
+
+                <TextBlock Text="Dataset actions" Style="{StaticResource SectionHeader}"/>
+                <UniformGrid Columns="3" Margin="0,0,0,4">
+                    <Button x:Name="AddRowButton"        Content="Add Row"        Margin="0,0,4,0" Padding="6,4" Click="OnAddRowClick"/>
+                    <Button x:Name="SaveDatasetButton"   Content="Save Dataset"   Margin="2,0"     Padding="6,4" Click="OnSaveDatasetClick"/>
+                    <Button x:Name="ResetDatasetButton"  Content="Reset Dataset"  Margin="4,0,0,0" Padding="6,4" Click="OnResetDatasetClick"/>
+                </UniformGrid>
+
+                <TextBlock Text="Model actions" Style="{StaticResource SectionHeader}"/>
+                <UniformGrid Columns="2" Margin="0,0,0,4">
+                    <Button x:Name="TrainButton"   Content="Train Model" Margin="0,0,4,0" Padding="6,4" Click="OnTrainClick"/>
+                    <Button x:Name="PredictButton" Content="Predict"     Margin="4,0,0,0" Padding="6,4" IsEnabled="False" Click="OnPredictClick"/>
+                </UniformGrid>
+                <UniformGrid Columns="2" Margin="0,4,0,4">
+                    <Button x:Name="SaveModelButton" Content="Save Model" Margin="0,0,4,0" Padding="6,4" Click="OnSaveModelClick"/>
+                    <Button x:Name="LoadModelButton" Content="Load Model" Margin="4,0,0,0" Padding="6,4" Click="OnLoadModelClick"/>
+                </UniformGrid>
+
+                <TextBlock Text="Forecast (defect rate)" Style="{StaticResource SectionHeader}"/>
+                <Button x:Name="ForecastButton"
+                        Content="Forecast 14 Days"
+                        Padding="6,4"
+                        Click="OnForecastClick"/>
+                <Border Margin="0,8,0,0" Padding="8" CornerRadius="4" Background="#F4F4F4">
+                    <TextBox x:Name="ForecastText"
+                             Text="No forecast yet."
+                             FontFamily="Consolas"
+                             FontSize="11"
+                             IsReadOnly="True"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             TextWrapping="NoWrap"
+                             Height="180"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"/>
+                </Border>
+
+                <TextBlock x:Name="StatusText"
+                           Margin="0,8,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="#333"/>
+
+                <Border x:Name="ResultBox"
+                        Margin="0,12,0,0"
+                        Padding="10"
+                        CornerRadius="4"
+                        Background="#EEE">
+                    <TextBlock x:Name="ResultText"
+                               Text="No prediction yet."
+                               FontSize="14"
+                               TextWrapping="Wrap"/>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
